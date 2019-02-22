@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<!-- Example based on http://bl.ocks.org/weiglemc/6185069 -->
+<html>
+  <head>
+  	<title>DataVis-10ways-2nd</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <style type="text/css">
+      body{
+        font: 11px sans-serif;
+      }
+      .axis path {
+        fill: none;
+        stroke: #FFFFFF;
+        shape-rendering: crispEdges;
+      }
+
+      .axis text{
+        font-size: 10pt;
+      }
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+      }
+
+      .tooltip{
+        position: absolute;
+        width: 200px;
+        height: 28px;
+        font-size: 10pt;
+      }  
+      .grid line{
+        fill: none;
+        stroke:#FFFFFF;
+        stroke-width:3;
+        stroke-opacity: 0.7;
+        shape-rendering: crispEdges;
+      } 
+      .grid path{
+        fill: none;
+        stroke: #FFFFFF;
+        shape-rendering: crispEdges;
+      }
+      .grid2 line{
+        fill: none;
+        stroke:#FFFFFF;
+        stroke-width:5;
+        stroke-opacity: 0.7;
+        shape-rendering: crispEdges;
+      } 
+      .grid2 path{
+        fill: none;
+        stroke: #FFFFFF;
+        shape-rendering: crispEdges;
+      }
+      .label{
+        font-size: 15pt;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="plot"></div>
+    <div id="legend"></div>
+  </body>
+
+  <script>
+    console.log(d3); // test if d3 is loaded
+
+    var margin = {top:20, right:90, bottom:50, left:50},
+        width = 650-margin.left-margin.right,
+        height = 500-margin.top-margin.bottom;
+    
+    var svg = d3.select("#plot").append("svg")
+        .attr("width", width+margin.left+margin.right)
+        .attr("height", height+margin.top+margin.bottom)
+      .append("g")
+        .attr("transform","translate("+margin.left+","+margin.top+")");
+
+    //load the cars dataset
+    d3.csv("cars-sample.csv").then(function(cars){
+    
+    //Remove NULL value
+    cars=cars.filter(function(d){return (d.Weight!="NA" && d.MPG!="NA");})
+
+    //change string (from CSV) into number format
+    cars.forEach(function(d,i){
+      d.Weight=+d.Weight;
+      d.MPG=+d.MPG;
+    });
+
+
+    
+
+    //Test that cars is loaded
+    console.log(cars)
+
+    //Setup x
+    var xScale = d3.scaleLinear()
+        //.domain(d3.extent(cars, function(d){return d.Weight}))
+        .domain([d3.min(cars,function(d){return d.Weight})-100,d3.max(cars,function(d){return d.Weight})+150])
+        .range([0,width]);
+    var xMap=function(d){return xScale(d.Weight)};
+
+    //Setup y
+    var yScale = d3.scaleLinear()
+        //.domain(d3.extent(cars, function(d){return d.MPG;}))
+        .domain([d3.min(cars,function(d){return d.MPG})-2,d3.max(cars,function(d){return d.MPG})+2])
+        .range([height,0]);
+    var yMap=function(d){return yScale(d.MPG)};
+
+    //Setup fill color
+    var cValue=function(d){return d.Manufacturer;}
+    var color=d3.scaleOrdinal(d3.schemeCategory10);
+
+    // x-axis
+    var xAxis=d3.axisBottom(xScale).ticks(4).tickPadding(10);
+    svg.append("g")
+        .attr("class","x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+      .append("text")
+        .attr("class","label")
+        .style("font-size","15pt")
+        .attr("x",width/2)
+        .attr("y",44)
+        .style("fill","black")
+        .style("text-anchor","middle")
+        .text("Weight");
+
+
+    // y-axis
+    var yAxis=d3.axisLeft(yScale).ticks(4);
+    svg.append("g")
+        .attr("class","y axis")
+        .call(yAxis)
+      .append("text")
+        .attr("class","label")
+        .style("font-size","15pt")
+        .attr("transform", "rotate(-90)")
+        .attr("x",-height/2)
+        .attr("y",-30)
+        .style("fill","black")
+        .style("text-anchor","middle")
+        .text("MPG");
+    //background
+    svg.append("rect")
+       .attr("x","0")
+       .attr("y","0")
+       .attr("width",width)
+       .attr("height",height)
+       .style("fill","#EAEAEA")
+
+    //xGrid1
+    svg.append("g")
+       .attr("class","grid")
+       .attr("transform", "translate(0," + height + ")")
+       .call(
+        d3.axisBottom(xScale).tickSize(-height).tickFormat(""))
+
+    //xGrid2
+    svg.append("g")
+       .attr("class","grid2")
+       .attr("transform", "translate(0," + height + ")")
+       .call(
+        d3.axisBottom(xScale).ticks(4).tickSize(-height).tickFormat(""))
+
+    //yGrid
+    svg.append("g")
+       .attr("class","grid")
+       .call(
+        d3.axisLeft(yScale).tickSize(-width).tickFormat(""))
+
+    //yGrid2
+    svg.append("g")
+       .attr("class","grid2")
+       .call(
+        d3.axisLeft(yScale).ticks(4).tickSize(-width).tickFormat(""))
+
+
+    // add the tooltip area to the webpage
+    var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+    // Draw dots
+    svg.selectAll(".dot")
+       .data(cars)
+      .enter().append("circle")
+       .attr("class","dot")
+       .attr("r",function(d){return d.Weight/500})
+       .attr("cx",xMap)
+       .attr("cy",yMap)
+       .style("fill",function(d){return color(cValue(d));})
+       .style("fill-opacity","0.5")
+       .style("stroke",function(d){return color(cValue(d));})
+       .style("stroke-opacity","1")
+       .on("mouseover", function(d) {
+          tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+          tooltip.html(d.Manufacturer + "<br/> (" + d.Weight
+          + ", " + d.MPG + ")")
+               .style("left", (d3.event.pageX + 5) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+          tooltip.style("color","black")})
+        
+       .on("mouseout", function(d) {
+          tooltip.transition()
+               .duration(300)
+               .style("opacity", 0);
+       });
+
+
+    var legend = d3.select("#legend");
+
+    
+    //draw legend
+    var color_legend = svg.append("g");
+    var weight_legend = svg.append("g");
+
+    //color legend
+    var l1 = color_legend.selectAll(".legend")
+       .data(color.domain())
+       .enter().append("g")
+       .attr("class","legend")
+       .attr("transform", function(d, i) { return "translate(10," + (60+ i * 20) + ")"; });
+
+    l1.append("circle")
+       .attr("cx", width+12)
+       .attr("cy",0)
+       .attr("r",6)
+       .style("fill",color)
+       .style("fill-opacity","0.6")
+       .style("stroke",color)
+       .style("stroke-opacity","1");;
+  
+    l1.append("text")
+       .attr("x",width+25)
+       .attr("y",0)
+       .attr("dy", ".35em")
+       .style("text-anchor", "start")
+       .text(function(d) { return d;});
+    
+    
+    //weight legend
+    var l2 = weight_legend.selectAll(".legend")
+       .data([2000,3000,4000])
+       .enter().append("g")
+       .attr("class","legend")
+       .attr("transform", function(d, i) { return "translate(10," + (200+i * 20) + ")"; });
+
+    l2.append("circle")
+       .attr("cx", width+12)
+       .attr("cy",0)
+       .attr("r",function(d){return d/500;})
+       .style("fill","grey")
+       .style("fill-opacity","0.6")
+       .style("stroke","grey")
+       .style("stroke-opacity","1");;
+  
+    l2.append("text")
+       .attr("x",width+25)
+       .attr("y",0)
+       .attr("dy", ".35em")
+       .style("text-anchor", "start")
+       .text(function(d) { return d;});
+    
+
+
+
+
+    });
+    
+
+
+                 
+
+
+
+   
+  </script>
+</html>
